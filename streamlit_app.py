@@ -1,11 +1,24 @@
 import streamlit as st
 from llama_cpp import Llama
+import requests
+
+url = "https://huggingface.co/IlyaGusev/saiga_llama3_8b_gguf/resolve/main/model-q4_K.gguf"
+output_file = "model-q4_K.gguf"
+
+response = requests.get(url)
+if response.status_code == 200:
+    with open(output_file, 'wb') as f:
+        f.write(response.content)
+    print("Файл успешно загружен.")
+else:
+    print("Не удалось загрузить файл.")
+
 
 SYSTEM_PROMPT = "Ты — Сайга, русскоязычный автоматический ассистент. Ты разговариваешь с людьми и помогаешь им."
 
 
 def interact(text,
-    model_path="/home/dimk/langchain/model-q4_K.gguf",
+    model_path="./model-q4_K.gguf",
     n_ctx=8192,
     top_k=30,
     top_p=0.9,
