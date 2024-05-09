@@ -76,3 +76,4 @@ tzdata==2024.1
 urllib3==2.2.1
 watchdog==4.0.0
 yarl==1.9.4
+wget https://huggingface.co/IlyaGusev/saiga_llama3_8b_gguf/resolve/main/model-q4_K.gguf
