@@ -1,18 +1,55 @@
 import streamlit as st
-from langchain.llms import OpenAI
+from llama_cpp import Llama
 
-st.title('🦜🔗 Quickstart App')
+SYSTEM_PROMPT = "Ты — Сайга, русскоязычный автоматический ассистент. Ты разговариваешь с людьми и помогаешь им."
 
-openai_api_key = st.sidebar.text_input('OpenAI API Key', type='password')
 
-def generate_response(input_text):
-    llm = OpenAI(temperature=0.7, openai_api_key=openai_api_key)
-    st.info(llm(input_text))
+def interact(text,
+    model_path="/home/dimk/langchain/model-q4_K.gguf",
+    n_ctx=8192,
+    top_k=30,
+    top_p=0.9,
+    temperature=0.6,
+    repeat_penalty=1.1
+):
+    model = Llama(
+        model_path=model_path,
+        n_ctx=n_ctx,
+        n_parts=1,
+        verbose=False,
+    )
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    user_message = text
+    messages.append({"role": "user", "content": user_message})
+    response = ""
+    for part in model.create_chat_completion(
+            messages,
+            temperature=temperature,
+            top_k=top_k,
+            top_p=top_p,
+            repeat_penalty=repeat_penalty,
+            stream=True,
+        ):
+            delta = part["choices"][0]["delta"]
+            if "content" in delta:
+                yield delta["content"]
+
+
+# Кастомизация лейаута
+st.set_page_config(page_title="DOCAI", page_icon="🤖", layout="wide", )
+st.markdown(f"""
+            <style>
+            .stApp {{background-image: url("https://api.unsplash.com/photos/?client_id=F3Lq5bwhNJdj_SbtRdcoMWaU2uW0Qd3iqeTrp9kXQOI"); 
+                     background-attachment: fixed;
+                     background-size: cover}}
+         </style>
+         """, unsafe_allow_html=True)
+
+st.title('🦜🔗 Тестовый запуск LLM')
+
 
 with st.form('my_form'):
-    text = st.text_area('Enter text:', 'What are the three key pieces of advice for learning how to code?')
-    submitted = st.form_submit_button('Submit')
-    if not openai_api_key.startswith('sk-'):
-        st.warning('Please enter your OpenAI API key!', icon='⚠')
-    if submitted and openai_api_key.startswith('sk-'):
-        generate_response(text)
+    text = st.text_area('Введите текст:', 'Привет!')
+    submitted = st.form_submit_button('Старт')
+    if submitted:
+        st.write_stream(interact(text))
