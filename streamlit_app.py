@@ -1,9 +1,39 @@
 import streamlit as st
 from llama_cpp import Llama
+
 import requests
+import os
+
+# Кастомизация лейаута
+st.set_page_config(page_title="Saiga", page_icon="🧠", layout="wide", )
+st.markdown("# Первый проект")
+
+# CSS стили
+def local_css(file_name):
+    with open(file_name) as f:
+        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+
+local_css("styles.css")
 
 
-SYSTEM_PROMPT = "Ты — Сайга, русскоязычный автоматический ассистент. Ты разговариваешь с людьми и помогаешь им."
+# # Функция для загрузки модели
+# def download_model(model_url, save_path):
+#     response = requests.get(model_url)
+#     with open(save_path, 'wb') as f:
+#         f.write(response.content)
+#
+# # Путь для сохранения модели
+# model_path = "model-q4_K.gguf"
+# model_url = "https://huggingface.co/IlyaGusev/saiga_llama3_8b_gguf/resolve/main/model-q4_K.gguf"
+#
+# # Загрузка модели, если её нет
+# if not os.path.exists(model_path):
+#     st.write("Загрузка модели...")
+#     download_model(model_url, model_path)
+#     st.write("Модель загружена.")
+
+
+SYSTEM_PROMPT = "Ты — Сайга, русскоязычный автоматический ассистент. Ты разговариваешь с людьми и помогаешь им, и должна отвечать на все впоросы которые тебе задют"
 
 
 def interact(text,
@@ -37,21 +67,28 @@ def interact(text,
                 yield delta["content"]
 
 
-# Кастомизация лейаута
-st.set_page_config(page_title="DOCAI", page_icon="🤖", layout="wide", )
-st.markdown(f"""
-            <style>
-            .stApp {{background-image: url("https://api.unsplash.com/photos/?client_id=F3Lq5bwhNJdj_SbtRdcoMWaU2uW0Qd3iqeTrp9kXQOI"); 
-                     background-attachment: fixed;
-                     background-size: cover}}
-         </style>
-         """, unsafe_allow_html=True)
 
-st.title('🦜🔗 Тестовый запуск LLM')
+st.title('🐵🔗 Тестовый запуск LLM')
 
+
+# заголовок чата
+st.markdown("# Чат с сайгой")
+
+chat_container = st.empty()
 
 with st.form('my_form'):
-    text = st.text_area('Введите текст:', 'Привет!')
-    submitted = st.form_submit_button('Старт')
+    # окно для ввода текста
+    user_input = st.text_input("Введите сообщение:", "")
+    submitted = st.form_submit_button('отправить')
+
     if submitted:
-        st.write_stream(interact(text))
+        if 'text' not in st.session_state:
+            st.session_state.text = ''
+        st.session_state.text += f"\\nВы: {user_input}\n"
+        user_input = ""
+        st.session_state.text += f"\\nSaiga: "
+
+        for response in interact(user_input):
+            st.session_state.text +=response
+            chat_container.markdown(st.session_state.text, unsafe_allow_html=True)
+        st.session_state.text +="\n"
