@@ -4,36 +4,50 @@ from llama_cpp import Llama
 import requests
 import os
 
+
+
 # Кастомизация лейаута
 st.set_page_config(page_title="Saiga", page_icon="🧠", layout="wide", )
-st.markdown("# Первый проект")
 
-# # CSS стили
+
+
+# CSS стили
 # def local_css(file_name):
 #     with open(file_name) as f:
 #         st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
-
+#
 # local_css("styles.css")
 
 
-# # Функция для загрузки модели
-# def download_model(model_url, save_path):
-#     response = requests.get(model_url)
-#     with open(save_path, 'wb') as f:
-#         f.write(response.content)
-#
-# # Путь для сохранения модели
-# model_path = "model-q4_K.gguf"
-# model_url = "https://huggingface.co/IlyaGusev/saiga_llama3_8b_gguf/resolve/main/model-q4_K.gguf"
-#
-# # Загрузка модели, если её нет
-# if not os.path.exists(model_path):
-#     st.write("Загрузка модели...")
-#     download_model(model_url, model_path)
-#     st.write("Модель загружена.")
+# Add elements to vertical setting menu
+st.sidebar.title("Настройки пользователя")
+
+# Add video source selection dropdown
+source = st.sidebar.selectbox(
+    "Модель",
+    ("Saiga",),
+)
+if source == "Saiga":
+    model_path = "model-q4_K.gguf"
+    model_url = "https://huggingface.co/IlyaGusev/saiga_llama3_8b_gguf/resolve/main/model-q4_K.gguf"
 
 
-SYSTEM_PROMPT = "Ты — Сайга, русскоязычный автоматический ассистент. Ты разговариваешь с людьми и помогаешь им, и должна отвечать на все впоросы которые тебе задют"
+# Функция для загрузки модели
+def download_model(model_url, save_path):
+    response = requests.get(model_url)
+    with open(save_path, 'wb') as f:
+        f.write(response.content)
+
+# Загрузка модели, если её нет
+if not os.path.exists(model_path):
+    st.write("Загрузка модели...")
+    download_model(model_url, model_path)
+    st.write("Модель загружена.")
+
+
+SYSTEM_PROMPT = ("""Ты — Сайга, русскоязычный автоматический ассистент. Ты разговариваешь с людьми и помогаешь им. 
+                  """)
+
 
 
 def interact(text,
@@ -41,7 +55,7 @@ def interact(text,
     n_ctx=8192,
     top_k=30,
     top_p=0.9,
-    temperature=0.6,
+    temperature=0.8,
     repeat_penalty=1.1
 ):
     model = Llama(
@@ -53,7 +67,6 @@ def interact(text,
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     user_message = text
     messages.append({"role": "user", "content": user_message})
-    response = ""
     for part in model.create_chat_completion(
             messages,
             temperature=temperature,
@@ -71,8 +84,7 @@ def interact(text,
 st.title('🐵🔗 Тестовый запуск LLM')
 
 
-# заголовок чата
-st.markdown("# Чат с сайгой")
+
 
 chat_container = st.empty()
 
@@ -84,11 +96,12 @@ with st.form('my_form'):
     if submitted:
         if 'text' not in st.session_state:
             st.session_state.text = ''
-        st.session_state.text += f"\\nВы: {user_input}\n"
-        user_input = ""
-        st.session_state.text += f"\\nSaiga: "
+        st.session_state.text += f"\nВы: {user_input}\n"
+
+        st.session_state.text += f"\nSaiga: "
 
         for response in interact(user_input):
             st.session_state.text +=response
             chat_container.markdown(st.session_state.text, unsafe_allow_html=True)
         st.session_state.text +="\n"
+        user_input = ""
