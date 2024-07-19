@@ -21,7 +21,7 @@ st.sidebar.title("Настройки пользователя")
 # Add video source selection dropdown
 source = st.sidebar.selectbox(
     "Модель",
-    ("Saiga",'Mistral-Nemo'),
+    ("Saiga",'Mistral-Nemo',"ruGPT-3.5-13B"),
 )
 if source == "Saiga":
     n_ctx = 8192 # контекстное окно
@@ -36,6 +36,15 @@ elif source == "Mistral-Nemo":
     model_url = "https://huggingface.co/second-state/Mistral-Nemo-Instruct-2407-GGUF/resolve/main/Mistral-Nemo-Instruct-2407-Q4_K_M.gguf"
     SYSTEM_PROMPT = ("""Ты — Юрист, русскоязычный автоматический ассистент. Ты разговариваешь с людьми и помогаешь им. 
                           """)
+
+elif source == "ruGPT-3.5-13B":
+    n_ctx = 2040 # контекстное окно
+    model_path = "ruGPT-3.5-13B.gguf"
+    model_url = "https://huggingface.co/oblivious/ruGPT-3.5-13B-GGUF/resolve/main/ruGPT-3.5-13B-Q8_0.gguf"
+    SYSTEM_PROMPT = ("""Ты — Юрист, русскоязычный автоматический ассистент. Ты разговариваешь с людьми и помогаешь им. 
+                          """)
+
+
 
 # Функция для загрузки модели
 def download_model(model_url, save_path):
