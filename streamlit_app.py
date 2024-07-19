@@ -4,12 +4,8 @@ import numpy as np
 import requests
 import os
 
-
-
 # Кастомизация лейаута
 st.set_page_config(page_title="Saiga", page_icon="🧠", layout="wide", )
-
-
 
 # CSS стили
 # def local_css(file_name):
@@ -31,10 +27,15 @@ if source == "Saiga":
     n_ctx = 8192 # контекстное окно
     model_path = "model-q4_K.gguf"
     model_url = "https://huggingface.co/IlyaGusev/saiga_llama3_8b_gguf/resolve/main/model-q4_K.gguf"
+    SYSTEM_PROMPT = ("""Ты — Сайга, русскоязычный автоматический Юрист. Ты разговариваешь с людьми и помогаешь им. 
+                      """)
+
 elif source == "Mistral-Nemo":
     n_ctx = 128000 # контекстное окно
     model_path = "Mistral-Nemo.gguf"
     model_url = "https://huggingface.co/second-state/Mistral-Nemo-Instruct-2407-GGUF/resolve/main/Mistral-Nemo-Instruct-2407-Q4_K_M.gguf"
+    SYSTEM_PROMPT = ("""Ты — Юрист, русскоязычный автоматический ассистент. Ты разговариваешь с людьми и помогаешь им. 
+                          """)
 
 # Функция для загрузки модели
 def download_model(model_url, save_path):
@@ -66,8 +67,7 @@ if not os.path.exists(model_path):
 
 
 
-SYSTEM_PROMPT = ("""Ты — Сайга, русскоязычный автоматический ассистент. Ты разговариваешь с людьми и помогаешь им. 
-                  """)
+
 # Температура модели
 temperature = st.sidebar.slider("Температура модели", 0.0, 1.0, 0.8, 0.01)
 
