@@ -3,6 +3,12 @@ from llama_cpp import Llama
 import numpy as np
 import requests
 import os
+from urllib.parse import urlencode
+import zipfile
+from langchain.embeddings import HuggingFaceEmbeddings
+from langchain.chains import RetrievalQA
+from langchain_community.vectorstores.faiss import FAISS
+import torch
 
 # Кастомизация лейаута
 st.set_page_config(page_title="Saiga", page_icon="🧠", layout="wide", )
@@ -27,28 +33,26 @@ if source == "Saiga":
     n_ctx = 8192 # контекстное окно
     model_path = "model-q4_K.gguf"
     model_url = "https://huggingface.co/IlyaGusev/saiga_llama3_8b_gguf/resolve/main/model-q4_K.gguf"
-    SYSTEM_PROMPT = ("""Ты — Сайга, русскоязычный автоматический Юрист. Ты разговариваешь с людьми и помогаешь им. 
-                      """)
+    SYSTEM_PROMPT = ("""Ты — Сайга, русскоязычный автоматический Юрист. Ты разговариваешь с людьми и делаешь юридическую консультацию.""")
 
 elif source == "Mistral-Nemo":
     n_ctx = 128000 # контекстное окно
     model_path = "Mistral-Nemo.gguf"
     model_url = "https://huggingface.co/second-state/Mistral-Nemo-Instruct-2407-GGUF/resolve/main/Mistral-Nemo-Instruct-2407-Q4_K_M.gguf"
-    SYSTEM_PROMPT = ("""Ты — Юрист, русскоязычный автоматический ассистент. Ты разговариваешь с людьми и помогаешь им. 
-                          """)
+    SYSTEM_PROMPT = ("""Ты — Юрист, русскоязычный автоматический Юрист. Ты разговариваешь с людьми и делаешь юридическую консультацию со сылками на нормы право.""")
 
 elif source == "ruGPT-3.5-13B":
     n_ctx = 2040 # контекстное окно
     model_path = "ruGPT-3.5-13B.gguf"
     model_url = "https://huggingface.co/oblivious/ruGPT-3.5-13B-GGUF/resolve/main/ruGPT-3.5-13B-Q8_0.gguf"
-    SYSTEM_PROMPT = ("""Ты — Юрист, русскоязычный автоматический ассистент. Ты разговариваешь с людьми и помогаешь им. 
-                          """)
+    SYSTEM_PROMPT = ("""Ты — Юрист, русскоязычный автоматический Юрист. Ты разговариваешь с людьми и делаешь юридическую консультацию.""")
 
 
 
 # Функция для загрузки модели
-def download_model(model_url, save_path):
-    with st.spinner("Загрузка модели..."):
+def download_model(model_url, save_path,text):
+
+    with st.spinner(f"Загрузка {text}..."):
         # Create a progress bar
         progress_bar = st.progress(0)
 
@@ -68,34 +72,67 @@ def download_model(model_url, save_path):
                     progress_bar.progress(progress)
 
         # Close the progress bar once done
-        st.success("Модель загружена!")
+        st.success("Загрузка завершена!")
 
 # Загрузка модели, если её нет
 if not os.path.exists(model_path):
-    download_model(model_url, model_path)
+    text = 'модели'
+    download_model(model_url, model_path, text)
 
+#грузим модель из HuggingFace для создания эмбеддингов из тесктов, можно взять любую модель, включая GPT или GiGaChat
+model_name=model_name_hug = 'sentence-transformers/all-MiniLM-L6-v2' # тут нужно подобрать  sentence sintisimilariti
+model_kwargs = {'device': 'cuda'}
+embeddings = HuggingFaceEmbeddings(model_name=model_name_hug, model_kwargs = model_kwargs )
 
+# Загрузка базы знаний
+name_base = 'faiss_index.zip'
+base_url = 'https://cloud-api.yandex.net/v1/disk/public/resources/download?'
+public_key = 'https://disk.yandex.ru/d/6rL_yXbXtbDZbA'  # Сюда вписываете вашу ссылку
+
+# Загружаем и расспаковываем базу знаний
+final_url = base_url + urlencode(dict(public_key=public_key))
+response = requests.get(final_url)
+download_url = response.json()['href']
+name_faile = 'faiss_index.zip'
+download_response = requests.get(download_url)
+with open(name_faile, 'wb') as f:   # Здесь укажите нужный путь к файлу
+    f.write(download_response.content)
+with zipfile.ZipFile(name_faile, 'r') as zip_ref:
+    zip_ref.extractall()
+
+# присоединяемся к БД
+db = FAISS.load_local(
+    '/home/dimk/langchain/Streamlit/faiss_index',
+    embeddings,
+    allow_dangerous_deserialization=True
+)
 
 
 # Температура модели
-temperature = st.sidebar.slider("Температура модели", 0.0, 1.0, 0.8, 0.01)
+temperature = st.sidebar.slider("Температура модели", 0.0, 1.0, 0.5, 0.01)
 
 
 #функция генерация ответа
+
 def interact(text,
     model_path="./model-q4_K.gguf",
-    n_ctx=8192,
+    n_ctx=4192,
     top_k=30,
     top_p=0.9,
     temperature=0.8,
     repeat_penalty=1.1
 ):
+
     model = Llama(
         model_path=model_path,
         n_ctx=n_ctx,
+        n_gpu_layers=-1,
         n_parts=1,
         verbose=False,
     )
+
+
+
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     user_message = text
     messages.append({"role": "user", "content": user_message})
@@ -141,7 +178,13 @@ if prompt := st.chat_input("What is up?"):
     response_placeholder = assistant_message.empty()
 
     # Generate assistant response
-    for resp in interact(prompt, temperature=temperature, n_ctx=n_ctx):
+    text_base = db.similarity_search_with_score(prompt, k=3)
+    promp = f"""Ответь на впропрос: "{prompt}"
+    На похожий вопрос отвечали следующим образом {text_base[0]}. 
+    В конце ответа напиши источники на основании которых построен ответ"""
+
+    print(promp)
+    for resp in interact(promp, temperature=temperature, n_ctx=n_ctx):
         response += resp
         response_placeholder.markdown(response, unsafe_allow_html=True)
 
