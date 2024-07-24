@@ -164,7 +164,7 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 # React to user input
-if prompt := st.chat_input("What is up?"):
+if prompt := st.chat_input("Задайте свой вопрос?"):
     # Display user message in chat message container
     st.chat_message("user").markdown(prompt)
     # Add user message to chat history
@@ -178,18 +178,28 @@ if prompt := st.chat_input("What is up?"):
     response_placeholder = assistant_message.empty()
 
     # Generate assistant response
-    text_base = db.similarity_search_with_score(prompt, k=3)
-    promp = f"""Ответь на впропрос: "{prompt}"
-    На похожий вопрос отвечали следующим образом {text_base[0]}. 
-    В конце ответа напиши источники на основании которых построен ответ"""
-
+    text_base = db.similarity_search_with_score(prompt, k=10)
+    text_base = '\n\n'.join([f'Вопрос: {i[0].page_content}\nОтвет: {i[0].metadata["Ответ"]}' for i in text_base if i[1] < 0.3])
+    if text_base:
+        promp = f"""Ответь на вопрос: "{prompt}"
+        На похожий вопрос отвечали следующим образом:\n{text_base}. 
+        В конце ответа напиши источники на основании которых построен ответ"""
+    else:
+        promp = f"""Ответь на вопрос: "{prompt}".
+        В конце ответа напиши источники на основании которых построен ответ"""
+    print()
     print(promp)
     for resp in interact(promp, temperature=temperature, n_ctx=n_ctx):
         response += resp
         response_placeholder.markdown(response, unsafe_allow_html=True)
-
+    if text_base:
+        response += '<h3><u>*При подготовке ответа использована база знаний*</u></h3>'
+        response_placeholder.markdown(response, unsafe_allow_html=True)
+    else:
+        response += '<h3><u>*Модель отвечала без подсказок*</u></h3>'
+        response_placeholder.markdown(response, unsafe_allow_html=True)
     # Add assistant response to chat history
     st.session_state.messages.append({"role": "assistant", "content": response})
-    print(st.session_state.messages[-3:])
+
 
 
