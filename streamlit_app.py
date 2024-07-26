@@ -84,10 +84,10 @@ model_name=model_name_hug = 'sentence-transformers/all-MiniLM-L6-v2' # тут н
 model_kwargs = {'device': 'cuda'}
 embeddings = HuggingFaceEmbeddings(model_name=model_name_hug, model_kwargs = model_kwargs )
 
-# Загрузка базы знаний
 name_base = 'faiss_index.zip'
+
 base_url = 'https://cloud-api.yandex.net/v1/disk/public/resources/download?'
-public_key = 'https://disk.yandex.ru/d/6rL_yXbXtbDZbA'  # Сюда вписываете вашу ссылку
+public_key = 'https://disk.yandex.ru/d/wvdi-x-Nkt_hfA'  # Сюда вписываете вашу ссылку
 
 # Загружаем и расспаковываем базу знаний
 final_url = base_url + urlencode(dict(public_key=public_key))
