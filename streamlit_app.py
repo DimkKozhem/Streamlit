@@ -178,14 +178,15 @@ if prompt := st.chat_input("Задайте свой вопрос?"):
     response_placeholder = assistant_message.empty()
 
     # Generate assistant response
-    text_base = db.similarity_search_with_score(prompt, k=10)
-    text_base = '\n\n'.join([f'Вопрос: {i[0].page_content}\nОтвет: {i[0].metadata["Ответ"]}' for i in text_base if i[1] < 0.3])
+    text_base = db.similarity_search_with_score(prompt, k=3)
+    text_base = '\n\n'.join([f'Вопрос: {i[0].page_content}\nОтвет: {i[0].metadata["Ответ"]}' for i in text_base if i[1] < 0.2])
     if text_base:
         promp = f"""Ответь на вопрос: "{prompt}"
         На похожий вопрос отвечали следующим образом:\n{text_base}. 
         В конце ответа напиши источники на основании которых построен ответ"""
     else:
         promp = f"""Ответь на вопрос: "{prompt}".
+        На похожий вопрос отвечали следующим образом:\n{text_base}. 
         В конце ответа напиши источники на основании которых построен ответ"""
     print()
     print(promp)
